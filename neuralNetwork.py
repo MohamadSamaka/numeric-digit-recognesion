@@ -37,8 +37,8 @@ class NeuralNetwork:
 
     def BackwordProp(self):
         w2 = self.layers[1].weights
-        a1 = self.layers[0].dotOutput
-        a2 = self.layers[1].dotOutput
+        a1 = self.layers[0].forwordPropOutput
+        a2 = self.layers[1].forwordPropOutput
         m = self.inputs.shape[0]
         dz2 = (a2 - self.oneHot)
         self.dw2 = (1/m)*np.dot(dz2.T, a1).T
