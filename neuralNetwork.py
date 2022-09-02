@@ -43,7 +43,7 @@ class NeuralNetwork:
         dz2 = (a2 - self.oneHot)
         self.dw2 = (1/m)*np.dot(dz2.T, a1).T
         self.db2 = (1/m)*np.sum(dz2.T, axis = 1, keepdims = True).T
-        dz1 = (1/m)*np.dot(w2, dz2.T)*self.ReluDerevative(a1).T
+        dz1 = np.dot(w2, dz2.T)*self.ReluDerevative(a1).T
         self.dw1 = (1/m)*np.dot(self.inputs.T, dz1.T)
         self.db1 = (1/m)*np.sum(dz1, axis = 1, keepdims = True).T
         pass
