@@ -58,8 +58,8 @@ class NeuralNetwork:
     
     def accuracy(self):
         a_out = self.layers[1].forwordPropOutput
-        a_out = np.argmax(a_out, 0)  # 0 represents row wise 
-        labels = np.argmax(self.oneHot, 0)
+        a_out = np.argmax(a_out, 1)
+        labels = np.argmax(self.oneHot, 1)
         acc = np.mean(a_out == labels)*100
         return acc
                        
