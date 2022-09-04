@@ -1,43 +1,67 @@
-from ast import keyword
-from ctypes import pointer
-from curses import keyname
-import sys
-# from PyQt6 import QtGui
-from PyQt6 import QtGui
-from PyQt6.QtGui import QImage, QPainter, QPen, QKeySequence, QShortcut
-from PyQt6.QtCore import QSize, Qt, QPoint, QLine
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMessageBox
+from os import sys
+from defaults import Defaluts
+from PyQt6.QtGui import QPainter, QPen, QKeySequence, QShortcut, QPixmap
+from PyQt6.QtCore import QSize, Qt, QPoint
+from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMessageBox, QHBoxLayout, QLabel, QWidget, QVBoxLayout
 
 
 # Subclass QMainWindow to customize your application's main window
-class MainWindow(QMainWindow):
+class MainWindow(QMainWindow, Defaluts):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("My App")
-        # button = QPushButton("Press Me!")
-        # button.setMaximumSize(button.sizeHint())
-        # self.setGeometry(500,500, 400, 400)
-        # button.move(200 - int(button.width()/2),0)
-        # self.layout().addWidget(button)
-
-        self.setGeometry(500,500, 400, 400)
         self.ShortcutsInit()
-        self.drawEvents = []
-        self.lastLineDraw = []
+        self.UiInit()
+        self.show()
 
+    def UiInit(self):
+        self.configureMainWindow()
+        self.createMainLayout()
+        self.createBoard()
+        self.createPredictionArea()
+        self.mainView.addWidget(self.imageContainer)
+        self.mainView.addWidget(self.predictionLabel)
 
-        self.image = QImage(self.size(), QImage.Format.Format_RGB32)
-        self.image.fill(Qt.GlobalColor.black)
-        self.drawing = False
-        self.brushSize = 2
-        self.brushColor = Qt.GlobalColor.white
-        self.lastPoint = QPoint()
+    
+    def configureMainWindow(self):
+        self.windowSize = QSize(self.HEIGHT, self.WIDTH)
+        self.resize(self.windowSize)
+
+    def createMainLayout(self):
+        self.mainLayoutContaier = QWidget(self)
+        self.setCentralWidget(self.mainLayoutContaier)
+        self.mainLayoutContaier.resize(self.windowSize)
+        self.mainView = QVBoxLayout()
+        self.mainLayoutContaier.setLayout(self.mainView)
+
+    def createBoard(self):
+        self.imageContainer = QLabel()
+        self.imageContainer.resize(self.windowSize)
+        self.pixmap = QPixmap(self.imageContainer.size())
+        self.pixmap.fill(Qt.GlobalColor.black)
+        self.imageContainer.setPixmap(self.pixmap)
+        self.mainView.addChildWidget(self.imageContainer)
+
+    def createPredictionArea(self):
+        self.predictionLabel = QLabel("none")
+        self.predictionLabel.setStyleSheet("background:green;")
+        self.predictionLabel .setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    def mouseMoveEvent(self, event):
+        self.setWindowTitle(f'Mouse coords: ( {event.position().x()} : {event.position().y()} )')
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            canvasPainter = QPainter(self.pixmap)
+            canvasPainter.setPen(QPen(self.brushColor, self.brushSize))
+            canvasPainter.drawLine(self.lastPoint, event.position())
+            self.imageContainer.setPixmap(self.pixmap)
+            self.lastLineDraw.append([self.lastPoint, event.position()])
+            self.lastPoint = event.position()
+            canvasPainter.end()
 
        
     def ShortcutsInit(self):
         self.msgSc = QShortcut(QKeySequence('Ctrl+Z'), self)
         self.msgSc.activated.connect(self.undo)
-
         self.quitSc = QShortcut(QKeySequence('Ctrl+Q'), self)
         self.quitSc.activated.connect(QApplication.instance().quit)
 
@@ -45,44 +69,37 @@ class MainWindow(QMainWindow):
     def undo(self):
         if self.drawEvents:
             self.drawEvents.pop()
-            self.image.fill(Qt.GlobalColor.black)
-            painter = QPainter(self.image)
-            painter.setPen(QPen(self.brushColor, self.brushSize, Qt.PenStyle.SolidLine)) 
-            for line in self.drawEvents:
-                for point in line:
-                    painter.drawLine(*point)
-            self.update()
+            self.ReDraw()
+
+
+    def ReDraw(self):
+        self.pixmap.fill(Qt.GlobalColor.black)
+        painter = QPainter(self.pixmap)
+        painter.setPen(QPen(self.brushColor, self.brushSize, Qt.PenStyle.SolidLine)) 
+        for line in self.drawEvents:
+            for point in line:
+                painter.drawLine(*point)
+
 
         
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.lastPoint = event.position()
 
-
-    def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            painter = QPainter(self.image)
-            painter.setPen(QPen(self.brushColor, self.brushSize, Qt.PenStyle.SolidLine)) 
-            painter.drawLine(self.lastPoint, event.position())
-            self.lastLineDraw.append([self.lastPoint, event.position()])
-            self.lastPoint = event.position()
-            self.update()
     
     def mouseReleaseEvent(self, event):
         self.drawEvents.append(self.lastLineDraw)
         self.lastLineDraw = []
 
 
-    def paintEvent(self, event):
-        canvasPainter = QPainter(self)
-        canvasPainter.drawImage(self.rect(), self.image, self.image.rect())
-        canvasPainter.setPen(QPen(self.brushColor, 20))
-        canvasPainter.end()
-
+    def resizeEvent(self, event):
+        # self.windowSize = self.mainLayoutContaier.size()
+        self.pixmap = self.pixmap.scaled(self.windowSize)
+        self.ReDraw()
+    
 
 app = QApplication(sys.argv)
 
 window = MainWindow()
-window.show()
 
 app.exec()
