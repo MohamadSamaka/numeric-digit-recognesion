@@ -3,7 +3,10 @@ from defaults import Defualts
 from PyQt6.QtGui import QPainter, QPen, QKeySequence, QShortcut, QPixmap
 from PyQt6.QtCore import QSize, Qt, QPoint
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMessageBox, QHBoxLayout, QLabel, QWidget, QVBoxLayout
+from tempfile import TemporaryFile
 
+
+PICTURE_CHANGED = False
 
 # Subclass QMainWindow to customize your application's main window
 class MainWindow(QMainWindow, Defualts):
@@ -57,7 +60,17 @@ class MainWindow(QMainWindow, Defualts):
             self.lastPoint = event.position()
             canvasPainter.end()
 
-       
+
+    def paintEvent(self, event):
+        if self.drawEvents:
+            self.savePic()
+
+    
+    def savePic(self):
+        self.pixmap.save("test.png", "JPG")
+        PICTURE_CHANGED = True
+
+
     def ShortcutsInit(self):
         self.msgSc = QShortcut(QKeySequence('Ctrl+Z'), self)
         self.msgSc.activated.connect(self.undo)
@@ -71,6 +84,7 @@ class MainWindow(QMainWindow, Defualts):
             self.ReDraw()
 
 
+
     def ReDraw(self):
         self.pixmap.fill(Qt.GlobalColor.black)
         painter = QPainter(self.pixmap)
@@ -78,6 +92,7 @@ class MainWindow(QMainWindow, Defualts):
         for line in self.drawEvents:
             for point in line:
                 painter.drawLine(*point)
+        self.imageContainer.setPixmap(self.pixmap)
 
 
         
@@ -95,3 +110,10 @@ class MainWindow(QMainWindow, Defualts):
         # self.windowSize = self.mainLayoutContaier.size()
         self.pixmap = self.pixmap.scaled(self.windowSize)
         self.ReDraw()
+
+
+app = QApplication(sys.argv)
+
+window = MainWindow()
+
+app.exec()
