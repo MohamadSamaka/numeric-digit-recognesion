@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QPoint
-class Defaluts:
+class Defualts:
     def __init__(self):
         self.HEIGHT = 800
         self.WIDTH = 800

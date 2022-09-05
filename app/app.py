@@ -1,12 +1,12 @@
 from os import sys
-from defaults import Defaluts
+from defaults import Defualts
 from PyQt6.QtGui import QPainter, QPen, QKeySequence, QShortcut, QPixmap
 from PyQt6.QtCore import QSize, Qt, QPoint
 from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMessageBox, QHBoxLayout, QLabel, QWidget, QVBoxLayout
 
 
 # Subclass QMainWindow to customize your application's main window
-class MainWindow(QMainWindow, Defaluts):
+class MainWindow(QMainWindow, Defualts):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("My App")
@@ -48,7 +48,6 @@ class MainWindow(QMainWindow, Defaluts):
         self.predictionLabel .setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def mouseMoveEvent(self, event):
-        self.setWindowTitle(f'Mouse coords: ( {event.position().x()} : {event.position().y()} )')
         if event.buttons() == Qt.MouseButton.LeftButton:
             canvasPainter = QPainter(self.pixmap)
             canvasPainter.setPen(QPen(self.brushColor, self.brushSize))
