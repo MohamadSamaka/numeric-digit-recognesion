@@ -95,10 +95,3 @@ class MainWindow(QMainWindow, Defualts):
         # self.windowSize = self.mainLayoutContaier.size()
         self.pixmap = self.pixmap.scaled(self.windowSize)
         self.ReDraw()
-    
-
-app = QApplication(sys.argv)
-
-window = MainWindow()
-
-app.exec()
