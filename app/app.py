@@ -1,34 +1,37 @@
-from os import sys
-from defaults import Defualts
-from PyQt6.QtGui import QPainter, QPen, QKeySequence, QShortcut, QPixmap
-from PyQt6.QtCore import QSize, Qt, QPoint
-from PyQt6.QtWidgets import QApplication, QMainWindow, QPushButton, QMessageBox, QHBoxLayout, QLabel, QWidget, QVBoxLayout
-from tempfile import TemporaryFile
+from . import defaults
+from PyQt6.QtGui import QPainter, QPen, QKeySequence, QShortcut, QPixmap, QImage
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtWidgets import QApplication, QMainWindow, QHBoxLayout, QLabel, QWidget, QVBoxLayout
+from numpy import array
 
-
-PICTURE_CHANGED = False
 
 # Subclass QMainWindow to customize your application's main window
-class MainWindow(QMainWindow, Defualts):
-    def __init__(self):
+class MainWindow(QMainWindow, defaults.Defualts):
+    PICTURE_CHANGED = False
+    def __init__(self, NN):
+        self.predicionColors = ["#FF0000", "#E31C00", "#C63900", "#AA5500", "#8E7100",
+                                "#718E00", "#55AA00", "#39C600", "#1CE300", "#00FF00", "#0d6ba5"]
         super().__init__()
-        self.setWindowTitle("My App")
-        self.ShortcutsInit()
         self.UiInit()
         self.show()
+        self.NN = NN
+
 
     def UiInit(self):
+        self.ShortcutsInit()
         self.configureMainWindow()
         self.createMainLayout()
         self.createBoard()
         self.createPredictionArea()
         self.mainView.addWidget(self.imageContainer)
-        self.mainView.addWidget(self.predictionLabel)
+        self.mainView.addWidget(self.predictionsLayoutContainer)
 
     
     def configureMainWindow(self):
+        self.setWindowTitle("My App")
         self.windowSize = QSize(self.HEIGHT, self.WIDTH)
         self.resize(self.windowSize)
+
 
     def createMainLayout(self):
         self.mainLayoutContaier = QWidget(self)
@@ -36,6 +39,7 @@ class MainWindow(QMainWindow, Defualts):
         self.mainLayoutContaier.resize(self.windowSize)
         self.mainView = QVBoxLayout()
         self.mainLayoutContaier.setLayout(self.mainView)
+
 
     def createBoard(self):
         self.imageContainer = QLabel()
@@ -45,30 +49,41 @@ class MainWindow(QMainWindow, Defualts):
         self.imageContainer.setPixmap(self.pixmap)
         self.mainView.addChildWidget(self.imageContainer)
 
+
     def createPredictionArea(self):
-        self.predictionLabel = QLabel("none")
-        self.predictionLabel.setStyleSheet("background:green;")
-        self.predictionLabel .setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.predictionsLayoutContainer = QWidget(self)
+        self.predictionsLayout = QHBoxLayout()
+        self.predictionLabels = []
+        for i in range(10):
+            label = QLabel(f"{i}\n")
+            label.setStyleSheet(f"background: {self.predicionColors[-1]}")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.predictionLabels.append(label)
+            self.predictionsLayout.addWidget(self.predictionLabels[i])
+        self.predictionsLayoutContainer.setLayout(self.predictionsLayout)
+
 
     def mouseMoveEvent(self, event):
         if event.buttons() == Qt.MouseButton.LeftButton:
             canvasPainter = QPainter(self.pixmap)
             canvasPainter.setPen(QPen(self.brushColor, self.brushSize))
-            canvasPainter.drawLine(self.lastPoint, event.position())
+            canvasPainter.drawLine(self.lastStartPoint, event.position())
             self.imageContainer.setPixmap(self.pixmap)
-            self.lastLineDraw.append([self.lastPoint, event.position()])
-            self.lastPoint = event.position()
+            self.lastLineDraw.append([self.lastStartPoint, event.position()])
+            self.lastStartPoint = event.position()
             canvasPainter.end()
+            
 
-
-    def paintEvent(self, event):
-        if self.drawEvents:
-            self.savePic()
-
-    
-    def savePic(self):
-        self.pixmap.save("test.png", "JPG")
-        PICTURE_CHANGED = True
+    def convertDrawingToMatrix(self):
+        img = self.pixmap.scaled(28,28).toImage().convertToFormat(QImage.Format.Format_Grayscale8)
+        imgarray = array(img.constBits().asarray(28*28)).astype('float32')/255.0
+        predictions = self.NN.runTest(imgarray, verbose = False)
+        predictionsSorted = predictions.copy()
+        predictionsSorted.sort()
+        mappedColors = {key:val for key,val in zip(predictionsSorted, self.predicionColors)}
+        for i, (val, label) in enumerate(zip(predictions,self.predictionLabels)):
+            label.setText(f"{i}\n{val}")
+            label.setStyleSheet(f"background: {mappedColors[val]}")
 
 
     def ShortcutsInit(self):
@@ -82,7 +97,10 @@ class MainWindow(QMainWindow, Defualts):
         if self.drawEvents:
             self.drawEvents.pop()
             self.ReDraw()
-
+            if not self.drawEvents:
+                for i in range(10):
+                    self.predictionLabels[i].setText(f"{i}\n")
+                    self.predictionLabels[i].setStyleSheet(f"background: {self.predicionColors[-1]}")
 
 
     def ReDraw(self):
@@ -93,27 +111,25 @@ class MainWindow(QMainWindow, Defualts):
             for point in line:
                 painter.drawLine(*point)
         self.imageContainer.setPixmap(self.pixmap)
-
+        if self.drawEvents:
+            self.convertDrawingToMatrix()
+            self.update()
 
         
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.lastPoint = event.position()
+            self.lastStartPoint = event.position()
 
     
     def mouseReleaseEvent(self, event):
         self.drawEvents.append(self.lastLineDraw)
         self.lastLineDraw = []
+        if self.drawEvents:
+            self.convertDrawingToMatrix()
+            self.update()
 
 
     def resizeEvent(self, event):
         # self.windowSize = self.mainLayoutContaier.size()
         self.pixmap = self.pixmap.scaled(self.windowSize)
         self.ReDraw()
-
-
-app = QApplication(sys.argv)
-
-window = MainWindow()
-
-app.exec()

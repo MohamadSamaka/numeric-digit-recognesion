@@ -1,7 +1,6 @@
-from defaults import Defaults as df
 import numpy as np
-from layerDense import LayerDense
 from os import system, name, path, remove
+from . import defaults as df, layerDense
 
 
 """
@@ -18,14 +17,15 @@ def clear():
     if name == 'nt': system('cls')
     else: system('clear')
 
-class NeuralNetwork:
-    def __init__(self, inputImages, inputLabels, NetworkInfo = df.defaultModel, alpha = None, n_iter = None):    
+
+class NeuralNetwork(df.F.Functions):
+    def __init__(self, inputImages = None, inputLabels = None, NetworkInfo = df.Defaults.defaultModel, alpha = None, n_iter = None):    
         self.layers_info = NetworkInfo["layers"]
-        self.layers = [LayerDense(*layer) for layer in self.layers_info] # layer is a list we use * to unpack it
+        self.layers = [layerDense.LayerDense(*layer) for layer in self.layers_info] # layer is a list we use * to unpack it
         self.inputImages = inputImages
         self.alpha =  alpha if alpha else NetworkInfo["alpha"]
         self.n_iter = n_iter if n_iter else NetworkInfo["iterations"]
-        self.OneHotEncodeLabels(inputLabels.reshape((1,-1)))
+        if inputLabels is not None: self.OneHotEncodeLabels(inputLabels.reshape((1,-1)))
 
 
     def OneHotEncodeLabels(self, inputLabels):
@@ -45,8 +45,7 @@ class NeuralNetwork:
         self.layers[0].ForwordProp(self.inputImages)
         layer1_output = self.layers[0].forwordPropOutput
         self.layers[1].ForwordProp(layer1_output)
-        layer2_output = self.layers[1].forwordPropOutput
-        self.Cost(layer2_output)
+        self.layers[1].forwordPropOutput
 
 
     def ReluDerevative(self, Z): #basiclly for val in Z if val > 0 it changes it to 1 if its less change it to 0
@@ -84,17 +83,19 @@ class NeuralNetwork:
     def GradientDecent(self):
         for i in range(self.n_iter):
             self.ForwordProp()
+            self.Cost(self.layers[1].forwordPropOutput)
             self.BackwordProp()
             self.UpdatingParms(self.alpha)
             if i%10 == 0:
                 self.LearningProcessReport(i + 1)
 
 
-    def runTest(self, testImages = None, testLabels = None):
+    def runTest(self, testImages = None, testLabels = None, verbose = True):
         if testImages is not None: self.inputImages = testImages
-        if testLabels is not None: self.oneHotEncodeLabels(testLabels)
+        if testLabels is not None: self.OneHotEncodeLabels(testLabels.reshape((1,-1)))
         self.ForwordProp()
-        self.TestReport()
+        if verbose: self.TestReport()
+        return np.around(self.layers[1].forwordPropOutput.flatten()*100, decimals = 3).tolist()
 
 
     def LearningProcessReport(self, it):
@@ -106,13 +107,13 @@ class NeuralNetwork:
         print(f"{'*'*40}\ntesting accuracy: {self.Accuracy()}")
         
 
-    def writeModle(self, fName = df.defaultModelName): #writing the model after learning is done
+    def writeModle(self, fName = df.Defaults.defaultModelName): #writing the model after learning is done
         if path.exists(fName): remove(fName)
         np.savez(fName,
         layers = np.asarray([
-            [*self.layers_info[0], self.layers[0].weights, self.layers[0].biases],
-            [*self.layers_info[1], self.layers[1].weights, self.layers[1].biases],
+            [*self.layers_info[0][:3], *self.layers[0].getWeightsBiases()],
+            [*self.layers_info[1][:3], *self.layers[1].getWeightsBiases()]
         ], dtype=object),
-         iterations = self.n_iter,
-         alpha = self.alpha,
+        iterations = self.n_iter,
+        alpha = self.alpha,
         )

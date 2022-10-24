@@ -1,5 +1,4 @@
 import numpy as np
-from activationFuncions import Functions as F
 
 class LayerDense:
     def __init__(self, n_inputs, n_neurones, activitionFunction, weights = None, biases = None):
@@ -12,7 +11,10 @@ class LayerDense:
         self.activitionFunction = activitionFunction
         
 
-
     def ForwordProp(self, inputs): #in this neural network there will be Mx784 input matrix where M is the # of training inputs
         self.dotOutput = np.dot(inputs, self.weights) + self.biases
         self.forwordPropOutput = self.activitionFunction(self.dotOutput)
+
+    def getWeightsBiases(self):
+        return self.weights, self.biases
+

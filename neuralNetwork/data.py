@@ -1,5 +1,6 @@
 import numpy as np
 import idx2numpy
+import os
 
 def ImageData(src):
     imagearray = idx2numpy.convert_from_file(src)
@@ -10,4 +11,3 @@ def ImageData(src):
 def ImageLabels(src):
     ImageTitles = idx2numpy.convert_from_file(src).reshape((-1,1))
     return ImageTitles
-
